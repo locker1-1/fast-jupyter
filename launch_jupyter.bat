@@ -1,16 +1,15 @@
 @echo off
 setlocal EnableExtensions
+chcp 65001 >nul
 title Jupyter Notebook
 
-rem ÓÒ¼ü²Ëµ¥»á°ÑÑ¡ÖĞµÄÎÄ¼ş¼Ğ×÷ÎªµÚ 1 ¸ö²ÎÊı´«½øÀ´£¬%~1 »á×Ô¶¯È¥µôÍâ²ãÒıºÅ
+rem å³é”®èœå•ä¼šæŠŠé€‰ä¸­çš„æ–‡ä»¶å¤¹ä½œä¸ºç¬¬ 1 ä¸ªå‚æ•°ä¼ è¿›æ¥ï¼›ç›´æ¥åŒå‡»æ—¶æ²¡æœ‰å‚æ•°
 set "TARGET=%~1"
-
-rem ²»´ø²ÎÊıÊ±£¨ÀıÈçÖ±½ÓË«»÷±¾ÎÄ¼ş£©¾ÍÔÚµ±Ç°Ä¿Â¼Æô¶¯
 if not defined TARGET set "TARGET=%CD%"
 
 if not exist "%TARGET%\" (
     echo.
-    echo   [´íÎó] ÕÒ²»µ½ÎÄ¼ş¼Ğ£º
+    echo   [é”™è¯¯] æ‰¾ä¸åˆ°æ–‡ä»¶å¤¹ï¼š
     echo   %TARGET%
     echo.
     pause
@@ -20,24 +19,94 @@ if not exist "%TARGET%\" (
 cd /d "%TARGET%"
 if errorlevel 1 (
     echo.
-    echo   [´íÎó] ÎŞ·¨½øÈëÎÄ¼ş¼Ğ£º
+    echo   [é”™è¯¯] æ— æ³•è¿›å…¥æ–‡ä»¶å¤¹ï¼š
     echo   %TARGET%
     echo.
     pause
     exit /b 1
 )
 
+rem å…ˆåœ¨ PATH é‡Œæ‰¾ jupyter-notebook.exe
+set "JUPYTER="
+for %%P in (jupyter-notebook.exe) do if not defined JUPYTER set "JUPYTER=%%~$PATH:P"
+
+rem PATH é‡Œæ²¡æœ‰å°±æŸ¥å¸¸è§çš„ Anaconda / Miniconda / Python å®‰è£…ä½ç½®
+if not defined JUPYTER (
+    for %%D in (
+        "E:\anaconda"
+        "D:\anaconda"
+        "C:\anaconda"
+        "C:\ProgramData\Anaconda3"
+        "C:\ProgramData\Miniconda3"
+        "C:\ProgramData\miniconda3"
+        "%USERPROFILE%\anaconda3"
+        "%USERPROFILE%\miniconda3"
+        "%LOCALAPPDATA%\anaconda3"
+        "%LOCALAPPDATA%\miniconda3"
+        "%LOCALAPPDATA%\Programs\Python\Python38"
+        "%LOCALAPPDATA%\Programs\Python\Python39"
+        "%LOCALAPPDATA%\Programs\Python\Python310"
+        "%LOCALAPPDATA%\Programs\Python\Python311"
+        "%LOCALAPPDATA%\Programs\Python\Python312"
+        "%LOCALAPPDATA%\Programs\Python\Python313"
+    ) do (
+        if not defined JUPYTER if exist "%%~D\Scripts\jupyter-notebook.exe" set "JUPYTER=%%~D\Scripts\jupyter-notebook.exe"
+    )
+)
+
+rem å¦‚æœ Jupyter æ¥è‡ª Anaconda / Minicondaï¼ŒæŠŠå®ƒè‡ªå·±çš„ DLL ç›®å½•åŠ è¿› PATHã€‚
+rem å¦åˆ™ _ssl / libcrypto / libssl è¿™ç±» C æ‰©å±•ä¼šæŠ¥
+rem ImportError: DLL load failed while importing _ssl
+if defined JUPYTER for %%I in ("%JUPYTER%") do set "JSCRIPTS=%%~dpI"
+if defined JSCRIPTS for %%I in ("%JSCRIPTS%..") do set "JROOT=%%~fI"
+if defined JROOT if exist "%JROOT%\Library\bin" (
+    set "PATH=%JROOT%\Library\bin;%JROOT%\Library\mingw-w64\bin;%JROOT%\Library\usr\bin;%JROOT%\DLLs;%JROOT%;%JROOT%\Scripts;%PATH%"
+    set "CONDA_DLL_SEARCH_MODIFICATION_ENABLE=1"
+)
+if defined JROOT if exist "%JROOT%\Library\bin" if not exist "%JROOT%\Library\bin\libssl*.dll" (
+    echo.
+    echo   [è­¦å‘Š] è¿™ä¸ª Anaconda é‡Œç¼ºå°‘ OpenSSL çš„ DLLï¼ˆlibssl*.dllï¼‰ï¼Œ
+    echo   Jupyter å¾ˆå¯èƒ½ä¼šæŠ¥ ImportError: DLL load failed while importing _sslã€‚
+    echo   å¤„ç†æ–¹æ³•è§ README çš„ã€Œ_ssl DLL åŠ è½½å¤±è´¥ã€ä¸€èŠ‚ã€‚
+    echo.
+)
+
+if defined JUPYTER goto run_exe
+
+where python >nul 2>nul
+if not errorlevel 1 goto run_python
+
+echo.
+echo   [é”™è¯¯] æ²¡æœ‰æ‰¾åˆ° Jupyter Notebookã€‚
+echo   è¯·å…ˆå®‰è£…ï¼špip install notebook
+echo   è£…å¥½åé‡æ–°å³é”®å³å¯ã€‚
+echo.
+pause
+exit /b 1
+
+:run_exe
 echo ============================================================
-echo   ÕıÔÚÆô¶¯ Jupyter Notebook
-echo   ¹¤×÷Ä¿Â¼£º%CD%
-echo   ¹Ø±Õ±¾´°¿Ú »ò °´ Ctrl+C ¿ÉÍ£Ö¹·şÎñ
+echo   Jupyter Notebook
+echo   å·¥ä½œç›®å½•ï¼š%CD%
+echo   å¯åŠ¨ç¨‹åºï¼š%JUPYTER%
+echo   å…³é—­æœ¬çª—å£æˆ–æŒ‰ Ctrl+C å¯åœæ­¢æœåŠ¡
 echo ============================================================
 echo.
+"%JUPYTER%"
+goto finished
 
-"E:\anaconda\Scripts\jupyter-notebook.exe"
+:run_python
+echo ============================================================
+echo   Jupyter Notebookï¼ˆé€šè¿‡ python -m jupyter notebook å¯åŠ¨ï¼‰
+echo   å·¥ä½œç›®å½•ï¼š%CD%
+echo   å…³é—­æœ¬çª—å£æˆ–æŒ‰ Ctrl+C å¯åœæ­¢æœåŠ¡
+echo ============================================================
+echo.
+python -m jupyter notebook
 
+:finished
 echo.
 echo ============================================================
-echo   Jupyter Notebook ÒÑÍË³ö
+echo   Jupyter Notebook å·²é€€å‡º
 echo ============================================================
 pause
